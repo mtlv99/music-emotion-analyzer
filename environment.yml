@@ -1,0 +1,12 @@
+name: music-analyzer
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - python-dotenv
+  - requests
+  - pip:
+    - openai==1.59.7
+    - syncedlyrics==1.0.1
