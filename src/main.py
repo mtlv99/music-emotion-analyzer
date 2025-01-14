@@ -1,9 +1,13 @@
-from utils.api_helpers import generate_completion  # Changed to absolute import
+from analyzer.analyze_lyrics import start_analysis
+from utils.read_song_metadata import read_metadata
 
 def main():
-    prompt = "Hello, how are you?"
-    response = generate_completion(prompt)
-    print(f"Response: {response}")
+    metadata = read_metadata()
 
+    if metadata:
+        start_analysis(metadata)
+    else:
+        print("Error: no se pudo obtener los metadatos de la canción.")
+    
 if __name__ == "__main__":
     main()

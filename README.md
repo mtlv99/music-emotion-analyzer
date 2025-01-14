@@ -11,7 +11,7 @@
 
 2. Activate environment:
    ```bash
-   conda activate openai-project
+   conda activate music-analyzer
    ```
 
 3. Copy `.env.example` to `.env` and add your OpenAI API key:
@@ -24,9 +24,4 @@
 Run the main script:
 ```bash
 python src/main.py
-```
-
-Run tests:
-```bash
-pytest tests/
 ```
