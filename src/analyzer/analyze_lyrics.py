@@ -1,4 +1,5 @@
 import json
+import re
 import syncedlyrics
 from utils.fetch_emotions import call_openai
 from config import settings
@@ -52,11 +53,24 @@ async def get_lyrics_emotion_list(metadata):
         tasks = [analyze_batch(current_batch) for current_batch in batch_lyrics]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for i, result in enumerate(results):
+        all_merged_results = {}
+
+        for i, (current_batch, result) in enumerate(zip(batch_lyrics, results)):
             if isinstance(result, Exception):
                 print(f"Batch {i + 1} failed: {result}")
+                emotion_response = None
             else:
                 print(f"Batch {i + 1} result: {result}")
+                emotion_response = result
+
+            merged_result = merge_lyrics_batch_and_emotion_response("\n".join(current_batch), emotion_response)
+            print(f"Merged result for batch {i + 1}: {merged_result}")
+
+            # Concatenate the merged result into all_merged_results
+            all_merged_results.update(merged_result)
+
+        all_merged_results_str = json.dumps(all_merged_results, indent=4, ensure_ascii=False)
+        print(f"All merged results: {all_merged_results_str}")
 
     else:
         print("Error: no se pudo obtener la letra de la canción.")
@@ -77,8 +91,40 @@ async def analyze_batch(batch):
 
         print(f"Analyzing batch:\n{batch_content}")
         response = call_openai(batch_content)
-        return response
+        return json.loads(response)
     except Exception as e:
         return {"error": str(e)}
 
 
+def merge_lyrics_batch_and_emotion_response(lyrics_batch_item, emotion_response):
+    # Dividir las líneas del texto de las letras
+    lyrics_lines = lyrics_batch_item.strip().split("\n")
+
+    # Crear un diccionario para almacenar el resultado
+    merged_result = {}
+
+    for line in lyrics_lines:
+        # Usar una expresión regular para separar el timestamp y la letra
+        match = re.match(r'(\[\d{2}:\d{2}\.\d{2}\])\s*(.*)', line)
+        if match:
+            timestamp = match.group(1)
+            lyric = match.group(2)
+
+            # Si el timestamp también está en emotion_response, combinar los datos
+            if timestamp in emotion_response:
+                merged_result[timestamp] = {
+                    "lyric": lyric,
+                    **emotion_response[timestamp]  # Desempaquetar las emociones
+                }
+            else:
+                # Si no está en emotion_response, asignar valores de emociones en 0.00
+                merged_result[timestamp] = {
+                    "lyric": lyric,
+                    "sadness": -1.00,
+                    "happiness": -1.00,
+                    "anger": -1.00,
+                    "excitement": -1.00,
+                    "fear": -1.00
+                }
+
+    return merged_result
